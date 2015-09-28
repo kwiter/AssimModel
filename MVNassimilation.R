@@ -80,6 +80,8 @@ mean(points$par[grep('shade',all_treatment(points$Plot))],na.rm=T)
 
 species = sort(unique(points[,'species']))
 
+gStom.fit = list()
+
 for(nSp in 1:length(species)){
  # nSp=2
 
@@ -500,6 +502,36 @@ pp = predict(fit,se.fit = F)
 points(P[whr],pp,pch=1.3,col=4)
 
 
+plot(P[whr],Y5,pch=1.3,col=4)
+Yp  = Y5; Yp[P[whr] < 0 ] = 0
+fit = smooth.spline(x = P[whr],y = Yp,nknots = 4)
+pp = predict(fit,P[whr])
+sap = pp[[2]]
+sap[sap < 0] = quantile(sap[-0.5 <= P[whr] & P[whr] < .5],.05)
+points(P[whr],sap)
+Yp[Yp > (2*sap)] = sap[Yp > (2*sap)]
+fit = smooth.spline(x = P[whr],y = Yp,nknots = 4)
+pp = predict(fit,P[whr])
+Yp[P[whr] < 0] = quantile(sap[-0.5 <= P[whr] & P[whr] < .5],.025)
+fit = smooth.spline(x = P[whr],y = Yp,nknots = 4)
+pp = predict(fit,P[whr])
+plot(P[whr],Yp,pch=1.3,col=4)
+points(pp)
+
+predict(fit,0)
+Ym = Y5[P[whr] < 0 ]
+plot(P[whr][P[whr] < 0],Ym)
+
+plot(P[whr],Yp,pch=1.3,col=4)
+points(pp)
+abline(predict(fit,0)$y,coefficients(fitP)[2])
+
+#gStom.fit[[nSp]] = fitP 
+#gStom.fit[[nSp+4]] = fit 
+#} 
+#saveRDS(gStom.fit,file = 'gStomFit.rds')
+
+
 whr =grep('g',rownames(xmat))
 #light = rep(0,nrow(xmat))
 #light[whr] = 1
@@ -573,7 +605,7 @@ beta = c(1,4,1,1)
 counter = 0
 
 # Store
-nsim<-10000
+nsim<-500
 pb <- txtProgressBar(min = 1, max = nsim, style = 3)
 burnin = round(nsim/4)
 
@@ -744,11 +776,12 @@ for (i in 2:nsim) {
   
   ##Add assimilation estimates for each treatment
   thetaP = xPred%*%betastar
+  #thetaP = apply(thetaP,2,rollprev,168)
   thetaP[thetaP[,1] < lo.t[1],1] = lo.t[1];thetaP[thetaP[,1] > hi.t[1],1] = hi.t[1]
   thetaP[thetaP[,2] < lo.t[2],2] = lo.t[2];thetaP[thetaP[,2] > hi.t[2],2] = hi.t[2]
   thetaP[thetaP[,3] < lo.t[3],3] = lo.t[3];thetaP[thetaP[,3] > hi.t[3],3] = hi.t[3]
   thetaP[thetaP[,4] < lo.t[4],4] = lo.t[4];thetaP[thetaP[,4] > hi.t[4],4] = hi.t[4]
-  thetaP = t(apply(thetaP,1,function(x) tnorm.mvtRcpp(x,x,sigma/4,lo = lo.t,hi=hi.t,times=2)))
+  thetaP = t(apply(thetaP,1,function(x) tnorm.mvtRcpp(x,x,sigma,lo = lo.t,hi=hi.t,times=2)))
   allP = rnorm(length(iPred),n.rect.h(iPred,thetaP[,1],thetaP[,2],thetaP[,3],thetaP[,4]),sqrt(sig))  
   allTot = cumsum(allP)
   
@@ -877,7 +910,7 @@ plot(allPmean[wh+17489*4],main= 'Shade Hot');abline(h=0,col=2)
 plot(allPmean[wh+17489*5],main= 'Gap Hot');abline(h=0,col=2)
 par(mfrow=c(1,1))
 
-save.image(file=paste('warming/',species[nSp],'MVNassimilationNoX.Rdata',sep=""))
+save.image(file=paste('warming/',species[nSp],'MVNassimilation11.Rdata',sep=""))
 
 }
 
